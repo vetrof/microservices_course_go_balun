@@ -1,0 +1,32 @@
+### GET request with a /ip/123.323.112.44
+GET http://127.0.0.1:8080/ip/123.323.112.44
+
+
+### GET request with /ip/
+GET http://127.0.0.1:8080/ip/
+
+
+### GET request with /notes
+POST http://127.0.0.1:8080/notes
+Content-Type: application/json
+
+{
+  "title": "999",
+  "content": "content",
+  "author": "content",
+  "is_public": true
+}
+
+
+
+### GET request /notes/123
+GET http://127.0.0.1:8080/notes/5529525679472188792
+
+
+### GET request ipinfo.io
+POST https://ipinfo.io/
+Content-Type: application/json
+
+{
+  "ip": "23.23.23.23"
+}
