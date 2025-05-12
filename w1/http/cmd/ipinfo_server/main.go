@@ -17,27 +17,26 @@ func main() {
 	db.InitDB()
 	defer db.DB.Close()
 
-	// Инициализация авторизации
-	auth.InitAuth()
-
 	//router init
 	router := chi.NewRouter()
 	router.Use(middleware.Logger)
 
 	//public path
-	router.Get("/self_ip", handlers.SelfIpHandler)
+	router.Post("/register", handlers.RegisterHandler)
 
 	//with token path
 	router.Group(func(r chi.Router) {
-		r.Use(auth.TokenAuthMiddleware)
+		r.Use(auth.AuthMiddleware)
+		r.Get("/self_ip", handlers.SelfIpHandler)
 		r.Get("/ext_ip/{ip}", handlers.ExtIpHandler)
-	})
-
-	//with basic auth path
-	router.Group(func(r chi.Router) {
-		r.Use(auth.BasicAuthMiddleware)
 		r.Get("/history", handlers.HistoryHandler)
 	})
+
+	////with basic auth path
+	//router.Group(func(r chi.Router) {
+	//	r.Use(auth.BasicAuthMiddleware)
+	//	r.Get("/history", handlers.HistoryHandler)
+	//})
 
 	//start server
 	err := http.ListenAndServe("localhost:8080", router)

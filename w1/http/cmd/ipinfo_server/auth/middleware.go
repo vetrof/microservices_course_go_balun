@@ -1,38 +1,40 @@
 package auth
 
 import (
+	"database/sql"
 	"encoding/base64"
+	"http/cmd/ipinfo_server/db"
 	"net/http"
-	"os"
 	"strings"
 )
-
-var token string
 
 // basic auth (admin:1234 = YWRtaW46MTIzNA==)
 var username = "admin"
 var password = "1234"
 
-func InitAuth() {
-	token = os.Getenv("API_TOKEN")
-	if token == "" {
-		token = "qwerty12345" // можно временно хардкодить
-	}
-}
-
-func TokenAuthMiddleware(next http.Handler) http.Handler {
+func AuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		auth := r.Header.Get("Authorization")
-		if !strings.HasPrefix(auth, "Bearer ") {
-			http.Error(w, "Missing Bearer token", http.StatusUnauthorized)
+		authHeader := r.Header.Get("Authorization")
+		if !strings.HasPrefix(authHeader, "Bearer ") {
+			http.Error(w, "Missing or invalid Authorization header", http.StatusUnauthorized)
 			return
 		}
-		incoming := strings.TrimPrefix(auth, "Bearer ")
-		if incoming != token {
-			http.Error(w, "Invalid token", http.StatusForbidden)
+
+		token := strings.TrimPrefix(authHeader, "Bearer ")
+
+		var userID int
+		err := db.DB.QueryRow("SELECT id FROM users WHERE token = ?", token).Scan(&userID)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				http.Error(w, "Invalid token", http.StatusUnauthorized)
+			} else {
+				http.Error(w, "Database error", http.StatusInternalServerError)
+			}
 			return
 		}
-		next.ServeHTTP(w, r)
+
+		ctx := WithUserID(r.Context(), userID)
+		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
 

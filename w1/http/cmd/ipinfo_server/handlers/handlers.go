@@ -2,7 +2,9 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/go-chi/chi"
+	"http/cmd/ipinfo_server/auth"
 	"http/cmd/ipinfo_server/db"
 	"io"
 	"log"
@@ -66,6 +68,12 @@ func ExtIpHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Получаем userID из контекста
+	userID, ok := auth.GetUserID(r.Context())
+	if ok {
+		ipInfo.UserID = userID
+	}
+
 	// Сохраняем в БД
 	if err := db.SaveIPInfo(ipInfo); err != nil {
 		log.Println("DB save error:", err)
@@ -78,11 +86,36 @@ func ExtIpHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func HistoryHandler(w http.ResponseWriter, r *http.Request) {
-	records, err := db.HistoryIPInfo()
+
+	// Получаем userID из контекста
+	userID, _ := auth.GetUserID(r.Context())
+
+	fmt.Println("userID --> ", userID)
+
+	records, err := db.HistoryIPInfoByUser(userID)
 	if err != nil {
 		http.Error(w, "Failed to fetch history", http.StatusInternalServerError)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(records)
+}
+
+func RegisterHandler(w http.ResponseWriter, r *http.Request) {
+	username := r.URL.Query().Get("username")
+	password := r.URL.Query().Get("password")
+	if username == "" || password == "" {
+		http.Error(w, "username and password required", http.StatusBadRequest)
+		return
+	}
+
+	user, err := db.CreateUser(username, password)
+	if err != nil {
+		http.Error(w, "Cannot create user: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	json.NewEncoder(w).Encode(map[string]string{
+		"token": user.Token,
+	})
 }
