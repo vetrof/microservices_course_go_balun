@@ -19,13 +19,14 @@ type server struct {
 
 func (s *server) Print(ctx context.Context, req *pb.PrintRequest) (*pb.PrintResponse, error) {
 	msg := req.GetMessage()
+	log.Printf("New incoming gRPC request: %s", msg)
 
-	// Логика — сохраняем сообщение
 	if err := s.printerService.SaveMessage(msg); err != nil {
+		log.Printf("Error saving message: %v", err)
 		return nil, err
 	}
 
-	fmt.Println("Received message:", msg)
+	log.Println("Message saved successfully")
 	return &pb.PrintResponse{Status: "Saved"}, nil
 }
 
